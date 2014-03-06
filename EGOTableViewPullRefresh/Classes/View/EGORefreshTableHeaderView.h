@@ -47,11 +47,11 @@ typedef enum{
 
 }
 
-@property(nonatomic,assign) id <EGORefreshTableHeaderDelegate> delegate;
-
-- (id)initWithFrame:(CGRect)frame arrowImageName:(NSString *)arrow textColor:(UIColor *)textColor;
+@property (nonatomic, assign) UIEdgeInsets originalInset;
+@property (nonatomic, assign) id <EGORefreshTableHeaderDelegate> delegate;
 
 - (void)refreshLastUpdatedDate;
+- (void)egoRefreshScrollView:(UIScrollView *)scrollView ForState:(EGOPullRefreshState)state;
 - (void)egoRefreshScrollViewDidScroll:(UIScrollView *)scrollView;
 - (void)egoRefreshScrollViewDidEndDragging:(UIScrollView *)scrollView;
 - (void)egoRefreshScrollViewDataSourceDidFinishedLoading:(UIScrollView *)scrollView;
@@ -61,5 +61,6 @@ typedef enum{
 - (void)egoRefreshTableHeaderDidTriggerRefresh:(EGORefreshTableHeaderView*)view;
 - (BOOL)egoRefreshTableHeaderDataSourceIsLoading:(EGORefreshTableHeaderView*)view;
 @optional
-- (NSDate*)egoRefreshTableHeaderDataSourceLastUpdated:(EGORefreshTableHeaderView*)view;
+- (NSDate*)egoRefreshTableHeaderDataSourceLastUpdated:(EGORefreshTableHeaderView *)view;
+- (BOOL)egoRefreshTableHeaderShouldShowLastUpdated:(EGORefreshTableHeaderView *)view;
 @end
