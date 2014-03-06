@@ -26,8 +26,14 @@
 
 #import "EGORefreshTableHeaderView.h"
 
+#define EGO_RGBA(r,g,b,a)  \
+    [UIColor colorWithRed:(r/255.0) green:(g/255.0) blue:(b/255.0) alpha:a]
+//#define TEXT_COLOR       [UIColor colorWithRed:87.0/255.0 green:108.0/255.0 blue:137.0/255.0 alpha:1.0]
+//#define TEXT_SHADOW      [UIColor colorWithWhite:0.9f alpha:1.0f];
 
-#define TEXT_COLOR	 [UIColor colorWithRed:87.0/255.0 green:108.0/255.0 blue:137.0/255.0 alpha:1.0]
+#define TEXT_COLOR         EGO_RGBA(180, 180, 180, 1);
+#define TEXT_SHADOW_COLOR  [UIColor blackColor];
+
 #define FLIP_ANIMATION_DURATION 0.18f
 
 
@@ -40,18 +46,17 @@
 @synthesize delegate=_delegate;
 
 
-- (id)initWithFrame:(CGRect)frame arrowImageName:(NSString *)arrow textColor:(UIColor *)textColor  {
-    if((self = [super initWithFrame:frame])) {
+- (id)initWithFrame:(CGRect)frame {
+    if (self = [super initWithFrame:frame]) {
 		
+        self.originalInset = UIEdgeInsetsMake(0, 0, 0, 0);
 		self.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-		self.backgroundColor = [UIColor colorWithRed:226.0/255.0 green:231.0/255.0 blue:237.0/255.0 alpha:1.0];
+		self.backgroundColor = [UIColor clearColor];
 
 		UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0.0f, frame.size.height - 30.0f, self.frame.size.width, 20.0f)];
 		label.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-		label.font = [UIFont systemFontOfSize:12.0f];
-		label.textColor = textColor;
-		label.shadowColor = [UIColor colorWithWhite:0.9f alpha:1.0f];
-		label.shadowOffset = CGSizeMake(0.0f, 1.0f);
+		label.font = [UIFont fontWithName:@"HelveticaNeue" size:14];
+		label.textColor = TEXT_COLOR;
 		label.backgroundColor = [UIColor clearColor];
 		label.textAlignment = NSTextAlignmentCenter;
 		[self addSubview:label];
@@ -60,10 +65,8 @@
 		
 		label = [[UILabel alloc] initWithFrame:CGRectMake(0.0f, frame.size.height - 48.0f, self.frame.size.width, 20.0f)];
 		label.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-		label.font = [UIFont boldSystemFontOfSize:13.0f];
-		label.textColor = textColor;
-		label.shadowColor = [UIColor colorWithWhite:0.9f alpha:1.0f];
-		label.shadowOffset = CGSizeMake(0.0f, 1.0f);
+		label.font = [UIFont fontWithName:@"HelveticaNeue" size:14];
+		label.textColor = TEXT_COLOR;
 		label.backgroundColor = [UIColor clearColor];
 		label.textAlignment = NSTextAlignmentCenter;
 		[self addSubview:label];
@@ -73,7 +76,7 @@
 		CALayer *layer = [CALayer layer];
 		layer.frame = CGRectMake(25.0f, frame.size.height - 65.0f, 30.0f, 55.0f);
 		layer.contentsGravity = kCAGravityResizeAspect;
-		layer.contents = (id)[UIImage imageNamed:arrow].CGImage;
+		layer.contents = (id)[UIImage imageNamed:@"ic_refresh_arrow.png"].CGImage;
 		
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 40000
 		if ([[UIScreen mainScreen] respondsToSelector:@selector(scale)]) {
@@ -99,34 +102,34 @@
 	
 }
 
-- (id)initWithFrame:(CGRect)frame  {
-  return [self initWithFrame:frame arrowImageName:@"blueArrow.png" textColor:TEXT_COLOR];
-}
 
 #pragma mark -
 #pragma mark Setters
 
 - (void)refreshLastUpdatedDate {
 	
-	if ([_delegate respondsToSelector:@selector(egoRefreshTableHeaderDataSourceLastUpdated:)]) {
+	NSString *dateString = nil;
+    
+    if ([_delegate respondsToSelector:@selector(egoRefreshTableHeaderDataSourceLastUpdated:)]) {
 		
 		NSDate *date = [_delegate egoRefreshTableHeaderDataSourceLastUpdated:self];
 		
-		[NSDateFormatter setDefaultFormatterBehavior:NSDateFormatterBehaviorDefault];
-		NSDateFormatter *dateFormatter = [[[NSDateFormatter alloc] init] autorelease];
-		[dateFormatter setDateStyle:NSDateFormatterShortStyle];
-		[dateFormatter setTimeStyle:NSDateFormatterShortStyle];
-
-		_lastUpdatedLabel.text = [NSString stringWithFormat:@"Last Updated: %@", [dateFormatter stringFromDate:date]];
-		[[NSUserDefaults standardUserDefaults] setObject:_lastUpdatedLabel.text forKey:@"EGORefreshTableView_LastRefresh"];
-		[[NSUserDefaults standardUserDefaults] synchronize];
-		
-	} else {
-		
-		_lastUpdatedLabel.text = nil;
-		
-	}
-
+        if (date) {
+            NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
+            [formatter setAMSymbol:@"AM"];
+            [formatter setPMSymbol:@"PM"];
+            [formatter setDateFormat:@"MM/dd/yyyy hh:mm:a"];
+            dateString = [NSString stringWithFormat:@"Last Updated: %@", [formatter stringFromDate:date]];
+        }
+    }
+    if (dateString)
+        [[NSUserDefaults standardUserDefaults] setObject:dateString forKey:@"EGORefreshTableView_LastRefresh"];
+    else
+        [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"EGORefreshTableView_LastRefresh"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    
+    _lastUpdatedLabel.text = dateString;
+    [self updateSubviews];
 }
 
 - (void)setState:(EGOPullRefreshState)aState{
@@ -178,9 +181,60 @@
 	_state = aState;
 }
 
+#pragma mark -
+#pragma mark Subviews
+
+- (void)updateSubviews
+{
+    _lastUpdatedLabel.hidden = (_lastUpdatedLabel.text.length == 0) ? YES : NO;
+
+    if ([_delegate respondsToSelector:@selector(egoRefreshTableHeaderShouldShowLastUpdated:)] &&
+        ![_delegate egoRefreshTableHeaderShouldShowLastUpdated:self]) {
+        _lastUpdatedLabel.hidden = YES;
+    }
+    
+    CGRect statusLabelFrame = CGRectMake(0.0f, self.frame.size.height - 48.0f,
+                                         self.frame.size.width, 20.0f);
+    NSTextAlignment statusLabelTextAlignment = NSTextAlignmentCenter;
+    if (_lastUpdatedLabel.hidden) {
+        statusLabelTextAlignment = NSTextAlignmentLeft;
+        statusLabelFrame = CGRectMake(_activityView.frame.origin.x + _activityView.frame.size.width + 10,
+                                      _activityView.frame.origin.y,
+                                      _statusLabel.frame.size.width,
+                                      _statusLabel.frame.size.height);
+    }
+    _statusLabel.frame = statusLabelFrame;
+    _statusLabel.textAlignment = statusLabelTextAlignment;
+}
+
 
 #pragma mark -
 #pragma mark ScrollView Methods
+
+- (void)egoRefreshScrollView:(UIScrollView *)scrollView ForState:(EGOPullRefreshState)state
+{
+    [self setState:state];
+    UIEdgeInsets contentInset = self.originalInset;
+    switch (state) {
+        case EGOOPullRefreshLoading:
+            [UIView beginAnimations:nil context:NULL];
+            [UIView setAnimationDuration:0.2];
+            contentInset.top += 60;
+            scrollView.contentInset = contentInset;
+            scrollView.scrollIndicatorInsets = self.originalInset;
+            [UIView commitAnimations];
+            break;
+        case EGOOPullRefreshNormal:
+            [UIView beginAnimations:nil context:NULL];
+            [UIView setAnimationDuration:0.3];
+            scrollView.contentInset = contentInset;
+            scrollView.scrollIndicatorInsets = self.originalInset;
+            [UIView commitAnimations];
+            break;
+        default:
+            break;
+    }
+}
 
 - (void)egoRefreshScrollViewDidScroll:(UIScrollView *)scrollView {	
 	
@@ -188,7 +242,10 @@
 		
 		CGFloat offset = MAX(scrollView.contentOffset.y * -1, 0);
 		offset = MIN(offset, 60);
-		scrollView.contentInset = UIEdgeInsetsMake(offset, 0.0f, 0.0f, 0.0f);
+        UIEdgeInsets contentInset = self.originalInset;
+        contentInset.top += offset;
+		scrollView.contentInset = contentInset;
+        scrollView.scrollIndicatorInsets = self.originalInset;
 		
 	} else if (scrollView.isDragging) {
 		
@@ -204,7 +261,8 @@
 		}
 		
 		if (scrollView.contentInset.top != 0) {
-			scrollView.contentInset = UIEdgeInsetsZero;
+			scrollView.contentInset = self.originalInset;
+            scrollView.scrollIndicatorInsets = self.originalInset;
 		}
 		
 	}
@@ -227,7 +285,10 @@
 		[self setState:EGOOPullRefreshLoading];
 		[UIView beginAnimations:nil context:NULL];
 		[UIView setAnimationDuration:0.2];
-		scrollView.contentInset = UIEdgeInsetsMake(60.0f, 0.0f, 0.0f, 0.0f);
+        UIEdgeInsets contentInset = self.originalInset;
+        contentInset.top += 60;
+		scrollView.contentInset = contentInset;
+        scrollView.scrollIndicatorInsets = self.originalInset;
 		[UIView commitAnimations];
 		
 	}
@@ -238,7 +299,8 @@
 	
 	[UIView beginAnimations:nil context:NULL];
 	[UIView setAnimationDuration:.3];
-	[scrollView setContentInset:UIEdgeInsetsMake(0.0f, 0.0f, 0.0f, 0.0f)];
+    scrollView.contentInset = self.originalInset;
+    scrollView.scrollIndicatorInsets = self.originalInset;
 	[UIView commitAnimations];
 	
 	[self setState:EGOOPullRefreshNormal];
