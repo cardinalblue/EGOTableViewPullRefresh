@@ -49,13 +49,14 @@
 - (id)initWithFrame:(CGRect)frame {
     if (self = [super initWithFrame:frame]) {
 		
-        self.originalInset = UIEdgeInsetsMake(0, 0, 0, 0);
+        self.originalInset = UIEdgeInsetsZero;
+        self.pullInset     = UIEdgeInsetsZero;
 		self.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 		self.backgroundColor = [UIColor clearColor];
 
 		UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0.0f, frame.size.height - 30.0f, self.frame.size.width, 20.0f)];
 		label.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-		label.font = [UIFont fontWithName:@"HelveticaNeue" size:14];
+		label.font = [UIFont fontWithName:DEFAULT_FONT_NAME size:14];
 		label.textColor = TEXT_COLOR;
 		label.backgroundColor = [UIColor clearColor];
 		label.textAlignment = NSTextAlignmentCenter;
@@ -65,7 +66,7 @@
 		
 		label = [[UILabel alloc] initWithFrame:CGRectMake(0.0f, frame.size.height - 48.0f, self.frame.size.width, 20.0f)];
 		label.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-		label.font = [UIFont fontWithName:@"HelveticaNeue" size:14];
+		label.font = [UIFont fontWithName:DEFAULT_FONT_NAME size:14];
 		label.textColor = TEXT_COLOR;
 		label.backgroundColor = [UIColor clearColor];
 		label.textAlignment = NSTextAlignmentCenter;
@@ -211,6 +212,11 @@
 #pragma mark -
 #pragma mark ScrollView Methods
 
+- (CGFloat)refreshContentOffset
+{
+    return - 65.0f - self.pullInset.top - self.pullInset.bottom;
+}
+
 - (void)egoRefreshScrollView:(UIScrollView *)scrollView ForState:(EGOPullRefreshState)state
 {
     [self setState:state];
@@ -254,9 +260,9 @@
 			_loading = [_delegate egoRefreshTableHeaderDataSourceIsLoading:self];
 		}
 		
-		if (_state == EGOOPullRefreshPulling && scrollView.contentOffset.y > -65.0f && scrollView.contentOffset.y < 0.0f && !_loading) {
+		if (_state == EGOOPullRefreshPulling && scrollView.contentOffset.y > [self refreshContentOffset] && scrollView.contentOffset.y < 0.0f && !_loading) {
 			[self setState:EGOOPullRefreshNormal];
-		} else if (_state == EGOOPullRefreshNormal && scrollView.contentOffset.y < -65.0f && !_loading) {
+		} else if (_state == EGOOPullRefreshNormal && scrollView.contentOffset.y < [self refreshContentOffset] && !_loading) {
 			[self setState:EGOOPullRefreshPulling];
 		}
 		
@@ -276,7 +282,7 @@
 		_loading = [_delegate egoRefreshTableHeaderDataSourceIsLoading:self];
 	}
 	
-	if (scrollView.contentOffset.y <= - 65.0f && !_loading) {
+	if (scrollView.contentOffset.y <= [self refreshContentOffset] && !_loading) {
 		
 		if ([_delegate respondsToSelector:@selector(egoRefreshTableHeaderDidTriggerRefresh:)]) {
 			[_delegate egoRefreshTableHeaderDidTriggerRefresh:self];
@@ -295,16 +301,15 @@
 	
 }
 
-- (void)egoRefreshScrollViewDataSourceDidFinishedLoading:(UIScrollView *)scrollView {	
-	
+- (void)egoRefreshScrollViewDataSourceDidFinishedLoading:(UIScrollView *)scrollView
+{
+    [self setState:EGOOPullRefreshNormal];
+    
 	[UIView beginAnimations:nil context:NULL];
 	[UIView setAnimationDuration:.3];
     scrollView.contentInset = self.originalInset;
     scrollView.scrollIndicatorInsets = self.originalInset;
 	[UIView commitAnimations];
-	
-	[self setState:EGOOPullRefreshNormal];
-
 }
 
 

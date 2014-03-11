@@ -48,6 +48,7 @@ typedef enum{
 }
 
 @property (nonatomic, assign) UIEdgeInsets originalInset;
+@property (nonatomic, assign) UIEdgeInsets pullInset;
 @property (nonatomic, assign) id <EGORefreshTableHeaderDelegate> delegate;
 
 - (void)refreshLastUpdatedDate;
